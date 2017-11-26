@@ -5,15 +5,8 @@ module Lib
 import Data.Char
 import Data.List
 import qualified Data.Map as Map
-
--- MODEL
-data Player
-  = Player1
-  | Player2
-
-type Position = Int
-
-type Moves = Map.Map Int Player
+import GameOver
+import Model
 
 -- VIEW
 boardStr :: Int -> Moves -> String
@@ -67,7 +60,7 @@ readMove size = do
   let asInts = map (\c -> ord (toLower c) - ord 'a') nonDigits :: [Int]
   let col = sum asInts :: Int
   let position = (row - 1) * size + col :: Position
-  if position > size ^ 2
+  if position > size ^ 2 - 1
     then do
       putStrLn "Invalid move"
       readMove size
@@ -80,21 +73,23 @@ readValidMove size moves = do
     then readValidMove size moves
     else return position
 
-gameOver :: Int -> Moves -> Bool
-gameOver size moves = Map.member 1 moves
+otherPlayer :: Player -> Player
+otherPlayer Player1 = Player2
+otherPlayer Player2 = Player1
 
 gameLoop :: Int -> Moves -> Player -> IO ()
 gameLoop size moves player = do
   putStrLn (boardStr size moves)
   move <- readValidMove size moves :: IO Position
   let newMoves = Map.insert move player moves
-  if gameOver size newMoves
-    then do
-      putStrLn "GAME OVER"
-    else gameLoop size newMoves player
+  case gameOver size newMoves of
+    Victory -> do
+      putStrLn (boardStr size newMoves)
+      putStrLn $ (show player) ++ " Won!"
+    Draw -> do
+      putStrLn (boardStr size newMoves)
+      putStrLn "It's a draw! No player can win this time."
+    GameOn -> gameLoop size newMoves (otherPlayer player)
 
 someFunc :: IO ()
 someFunc = gameLoop 3 Map.empty Player1
-  -- let moves = Map.fromList [(3, Player1)]
-  -- putStrLn (boardStr 3 moves)
-  -- FIXME: Create a emptyMoves func or smth
